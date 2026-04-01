@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+.env
+
+# Data and Weights
+backend/src/data/*.pkl
+backend/src/data/*.csv
+data/
+
+# Node.js
+node_modules/
+dist/
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.txt
+*.jpg
+*.md
+!README.md
+!README-WEB.md
+!PROJECT_DOCUMENTATION.md
+!PRESENTATION_GUIDE.md

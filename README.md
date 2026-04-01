@@ -1,3 +1,74 @@
+# Pacman AI - Reinforcement Learning Platform
+
+A modern, web-based Reinforcement Learning platform for the classic Berkeley Pacman AI Challenge. Features a FastAPI backend and a React/Canvas frontend with live streaming of AI internal states.
+
+## 🚀 Features
+- **Real-time Visualization**: Watch Pacman learn live via high-performance Canvas rendering.
+- **AI Trace System**: View live Q-values, weights, and TD-errors in the dashboard.
+- **Advanced Agents**: Includes Q-Learning, Approximate Q-Learning, and Approximate SARSA.
+- **Weight Persistence**: Agents automatically save and load knowledge across sessions.
+- **Performance Benchmarking**: Integrated grading script for testing across 10+ layouts.
+
+## 🛠️ Installation
+
+### Prerequisites
+- Python 3.8+
+- Node.js 16+
+
+### Backend Setup
+1. Navigate to the backend folder:
+   ```bash
+   cd backend
+   ```
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv .venv
+   # On Windows: .venv\Scripts\activate
+   # On Linux/macOS: source .venv/bin/activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Start the backend:
+   ```bash
+   python main.py
+   ```
+
+### Frontend Setup
+1. Navigate to the frontend folder:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## 🧠 Training and Testing
+1. Open the web interface (usually `http://localhost:5173`).
+2. Select **ApproxQLearningAgent** and a layout (e.g., `mediumClassic`).
+3. Set episodes to **500** and click **Run Game**.
+4. Once training is complete, switch maps or decrease epsilon to test the agent's performance.
+
+## 📊 Evaluation Script
+Run the automated grader to check win rates across multiple maps:
+```bash
+cd backend/src
+python grade.py -p ApproxQLearningAgent --quick
+```
+
+## 📂 Project Structure
+- `backend/main.py`: FastAPI server and WebSocket handler.
+- `backend/src/`: Core AI logic and game engine.
+- `backend/src/feature_extraction.py`: Advanced feature engineering for RL.
+- `frontend/src/App.jsx`: React application logic and rendering.
+- `PROJECT_DOCUMENTATION.md`: Detailed technical explanation of the AI models.
+
 📘 RL Pacman – Reinforcement Learning Implementation
 📌 Overview
 

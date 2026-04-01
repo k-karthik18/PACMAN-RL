@@ -4,10 +4,17 @@ import os
 from game import Agent
 from util import Counter
 from util import manhattanDistance
+from feature_extraction import getCompetitionFeatures
+
+TRACE_QUEUE = None
+
+def set_trace_queue(q):
+    global TRACE_QUEUE
+    TRACE_QUEUE = q
 
 class ApproxSarsaAgent(Agent):
 
-    def __init__(self, alpha=0.05, gamma=0.9, epsilon=0.3):
+    def __init__(self, alpha=0.1, gamma=0.9, epsilon=0.2):
         super().__init__()
 
         self.alpha = float(alpha)
@@ -15,76 +22,59 @@ class ApproxSarsaAgent(Agent):
         self.epsilon = float(epsilon)
 
         self.weights = Counter()
+        
+        # Load existing weights if they exist
+        if os.path.exists("data/approx_sarsa_weights.pkl"):
+            try:
+                with open("data/approx_sarsa_weights.pkl", "rb") as f:
+                    saved_weights = pickle.load(f)
+                    self.weights.update(saved_weights)
+                    print(f"Loaded existing weights for ApproxSarsaAgent: {self.weights}")
+            except Exception as e:
+                print(f"Error loading weights: {e}")
 
         self.prevState = None
         self.prevAction = None
-
         self.episode = 0
 
         if not os.path.exists("data"):
             os.makedirs("data")
-
+            
         if not os.path.exists("data/approx_sarsa_weights.csv"):
-            with open("data/approx_sarsa_weights.csv", "w") as f:
-                f.write("Episode,bias,closestFood,closestGhost,foodCount,danger\n")
+            with open("data/approx_sarsa_weights.csv","w") as f:
+                f.write("Episode,bias,closestFood,nearbyFood,ghostDist,nearGhost,danger,scaredGhostDist,canEatGhost,capsuleDist,mobility,stopped,score\n")
 
-    # ----------------------------
-    # FEATURES
-    # ----------------------------
-    def getFeatures(self, state, action):
+    def getFeatures(self,state,action):
+        return getCompetitionFeatures(state, action)
 
-        features = Counter()
+    def getQValue(self,state,action):
 
-        nextState = state.generatePacmanSuccessor(action)
-
-        pacPos = nextState.getPacmanPosition()
-        foodList = nextState.getFood().asList()
-        ghostPositions = nextState.getGhostPositions()
-
-        features["bias"] = 1.0
-
-        if len(foodList) > 0:
-            minFoodDist = min([manhattanDistance(pacPos, food) for food in foodList])
-            features["closestFood"] = 1.0 / (minFoodDist + 1.0)
-
-        if len(ghostPositions) > 0:
-            minGhostDist = min([manhattanDistance(pacPos, ghost) for ghost in ghostPositions])
-            features["closestGhost"] = 1.0 / (minGhostDist + 1.0)
-
-            if minGhostDist <= 1:
-                features["danger"] = 1.0
-            else:
-                features["danger"] = 0.0
-
-        features["foodCount"] = nextState.getNumFood() / 100.0
-
-        return features
-
-    # ----------------------------
-    def getQValue(self, state, action):
         if action is None:
-            return 0.0
-        features = self.getFeatures(state, action)
+            return 0
+
+        features = self.getFeatures(state,action)
+
         return self.weights * features
 
-    # ----------------------------
-    def chooseAction(self, state):
+    def chooseAction(self,state):
 
         legalActions = state.getLegalPacmanActions()
-        if len(legalActions) == 0:
+
+        if not legalActions:
             return None
 
         if random.random() < self.epsilon:
             return random.choice(legalActions)
 
-        qValues = [(self.getQValue(state, a), a) for a in legalActions]
-        maxQ = max(qValues)[0]
-        bestActions = [a for q, a in qValues if q == maxQ]
+        qvals = [(self.getQValue(state,a),a) for a in legalActions]
 
-        return random.choice(bestActions)
+        maxQ = max(qvals)[0]
 
-    # ----------------------------
-    def getAction(self, state):
+        best = [a for q,a in qvals if q == maxQ]
+
+        return random.choice(best)
+
+    def getAction(self,state):
 
         action = self.chooseAction(state)
 
@@ -92,47 +82,81 @@ class ApproxSarsaAgent(Agent):
 
             reward = state.getScore() - self.prevState.getScore()
 
-            tdError = reward + self.gamma * self.getQValue(state, action) \
-                      - self.getQValue(self.prevState, self.prevAction)
+            tdError = reward + self.gamma*self.getQValue(state,action) - \
+                      self.getQValue(self.prevState,self.prevAction)
 
-            features = self.getFeatures(self.prevState, self.prevAction)
+            features = self.getFeatures(self.prevState,self.prevAction)
 
             for f in features:
                 self.weights[f] += self.alpha * tdError * features[f]
+            
+            if TRACE_QUEUE is not None:
+                try:
+                    TRACE_QUEUE.put({
+                        "type": "trace",
+                        "agent": "ApproxSarsaAgent",
+                        "event": "update",
+                        "action": self.prevAction,
+                        "reward": reward,
+                        "td_error": tdError,
+                        "features": dict(features),
+                        "weights_after": dict(self.weights),
+                    })
+                except Exception:
+                    pass
+
+        if TRACE_QUEUE is not None:
+            try:
+                legalActions = state.getLegalPacmanActions()
+                qvals = {a: self.getQValue(state, a) for a in legalActions}
+                TRACE_QUEUE.put({
+                    "type": "trace",
+                    "agent": "ApproxSarsaAgent",
+                    "event": "select_action",
+                    "epsilon": self.epsilon,
+                    "legal_actions": list(legalActions),
+                    "q_values": qvals,
+                    "selected": action,
+                })
+            except Exception:
+                pass
 
         self.prevState = state
         self.prevAction = action
 
         return action
 
-    # ----------------------------
-    def final(self, state):
+    def final(self,state):
 
         reward = state.getScore() - self.prevState.getScore()
 
-        tdError = reward - self.getQValue(self.prevState, self.prevAction)
+        tdError = reward - self.getQValue(self.prevState,self.prevAction)
 
-        features = self.getFeatures(self.prevState, self.prevAction)
+        features = self.getFeatures(self.prevState,self.prevAction)
 
         for f in features:
             self.weights[f] += self.alpha * tdError * features[f]
 
         self.episode += 1
 
-        # Save pickle
-        with open("data/approx_sarsa_weights.pkl", "wb") as f:
-            pickle.dump(dict(self.weights), f)
-
-        # Append CSV
-        with open("data/approx_sarsa_weights.csv", "a") as f:
+        with open("data/approx_sarsa_weights.pkl","wb") as f:
+            pickle.dump(dict(self.weights),f)
+            
+        with open("data/approx_sarsa_weights.csv","a") as f:
             f.write(f"{self.episode},"
-                    f"{self.weights['bias']},"
-                    f"{self.weights['closestFood']},"
-                    f"{self.weights['closestGhost']},"
-                    f"{self.weights['foodCount']},"
-                    f"{self.weights['danger']}\n")
+                    f"{self.weights.get('bias', 0)},"
+                    f"{self.weights.get('closestFood', 0)},"
+                    f"{self.weights.get('nearbyFood', 0)},"
+                    f"{self.weights.get('ghostDist', 0)},"
+                    f"{self.weights.get('nearGhost', 0)},"
+                    f"{self.weights.get('danger', 0)},"
+                    f"{self.weights.get('scaredGhostDist', 0)},"
+                    f"{self.weights.get('canEatGhost', 0)},"
+                    f"{self.weights.get('capsuleDist', 0)},"
+                    f"{self.weights.get('mobility', 0)},"
+                    f"{self.weights.get('stopped', 0)},"
+                    f"{self.weights.get('score', 0)}\n")
 
-        # Epsilon decay
-        self.epsilon = max(0.01, self.epsilon * 0.995)
+        self.epsilon = max(0.01,self.epsilon*0.995)
 
-        print(f"Approx SARSA Episode {self.episode} done. Epsilon {self.epsilon:.4f}")
+        print(f"SARSA Episode {self.episode} done | epsilon {self.epsilon:.3f}")

@@ -12,14 +12,24 @@ def set_trace_queue(q):
 
 class QLearningAgent(Agent):
 
-    def __init__(self, alpha=0.2, gamma=0.8, epsilon=0.1):
+    def __init__(self, alpha=0.1, gamma=0.8, epsilon=0.1, numTraining=0):
         super().__init__()
 
         self.alpha = float(alpha)
         self.gamma = float(gamma)
         self.epsilon = float(epsilon)
-
+        self.numTraining = int(numTraining)
         self.qValues = Counter()
+
+        # Load existing Q-values if they exist
+        if os.path.exists("data/q_values.pkl"):
+            try:
+                with open("data/q_values.pkl", "rb") as f:
+                    saved_q = pickle.load(f)
+                    self.qValues.update(saved_q)
+                    print(f"Loaded existing Q-values for QLearningAgent: {len(self.qValues)} states")
+            except Exception as e:
+                print(f"Error loading Q-values: {e}")
 
         self.prevState = None
         self.prevAction = None
@@ -31,44 +41,19 @@ class QLearningAgent(Agent):
     def getQValue(self, state, action):
         return self.qValues[(state, action)]
 
-    def getValue(self, state):
+    def computeValueFromQValues(self, state):
         legalActions = state.getLegalPacmanActions()
-        if len(legalActions) == 0:
+        if not legalActions:
             return 0.0
-        return max([self.getQValue(state, a) for a in legalActions])
+        return max(self.getQValue(state, action) for action in legalActions)
 
-    def getPolicy(self, state):
+    def computeActionFromQValues(self, state):
         legalActions = state.getLegalPacmanActions()
-        if len(legalActions) == 0:
+        if not legalActions:
             return None
-
-        bestValue = self.getValue(state)
-        bestActions = [a for a in legalActions
-                       if self.getQValue(state, a) == bestValue]
-
+        maxVal = self.computeValueFromQValues(state)
+        bestActions = [a for a in legalActions if self.getQValue(state, a) == maxVal]
         return random.choice(bestActions)
-
-    def update(self, state, action, nextState, reward):
-        sample = reward + self.gamma * self.getValue(nextState)
-        oldValue = self.getQValue(state, action)
-        newValue = oldValue + self.alpha * (sample - oldValue)
-
-        self.qValues[(state, action)] = newValue
-
-        if TRACE_QUEUE is not None:
-            try:
-                TRACE_QUEUE.put({
-                    "type": "trace",
-                    "agent": "QLearningAgent",
-                    "event": "update",
-                    "action": action,
-                    "reward": reward,
-                    "sample": sample,
-                    "old_value": oldValue,
-                    "new_value": newValue,
-                })
-            except Exception:
-                pass
 
     def getAction(self, state):
 

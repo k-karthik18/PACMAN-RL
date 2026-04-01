@@ -103,6 +103,7 @@ def run_game_thread(
     state_queue: queue.Queue,
     trace_queue: Optional[queue.Queue] = None,
     action_queue: Optional[queue.Queue] = None,
+    num_ghosts: int = 1,
 ):
     """Run games in a thread; push state updates to state_queue. For ManualAgent, action_queue must be provided."""
     cwd = os.getcwd()
@@ -153,7 +154,7 @@ def run_game_thread(
                 except Exception:
                     pass
 
-        ghosts = [RandomGhost(i + 1) for i in range(lay.getNumGhosts())]
+        ghosts = [RandomGhost(i + 1) for i in range(num_ghosts)]
         display = WebDisplay(state_queue, frame_delay=frame_delay)
         rules = pacman.ClassicGameRules(timeout=30)
 
@@ -286,7 +287,8 @@ async def websocket_run(websocket: WebSocket):
     layout_name = config.get("layout", "smallClassic")
     pacman_agent = config.get("agent", "RandomAgent")
     agent_params = config.get("agentParams") or {}
-    num_episodes = max(1, min(int(config.get("numEpisodes", 1)), 100))
+    num_episodes = max(1, min(int(config.get("numEpisodes", 1)), 1000))
+    num_ghosts = max(1, min(int(config.get("numGhosts", 1)), 4))
     frame_delay = max(0.01, min(float(config.get("frameDelay", 0.08)), 0.5))
     is_manual = pacman_agent == "ManualAgent"
     if is_manual:
@@ -301,6 +303,7 @@ async def websocket_run(websocket: WebSocket):
         run_game_thread(
             layout_name, pacman_agent, agent_params, num_episodes, frame_delay,
             state_queue, trace_queue=trace_queue, action_queue=action_queue,
+            num_ghosts=num_ghosts,
         )
 
     thread = threading.Thread(target=run)

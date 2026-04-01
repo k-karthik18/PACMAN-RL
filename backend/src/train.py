@@ -1,17 +1,25 @@
-# train.py
 from pacman import runGames
 from layout import getLayout
 from ghostAgents import RandomGhost
-import multiAgents
-import textDisplay  # <-- Import textDisplay for NullGraphics
+from approxQLearningAgents import ApproxQLearningAgent
+import textDisplay
 
-# Train for 200 episodes with no graphics
+layout = getLayout("smallClassic")
+
+agent = ApproxQLearningAgent(
+    alpha=0.05,
+    epsilon=0.3,
+    gamma=0.9
+)
+
+ghosts = [RandomGhost(1)]
+
 runGames(
-    layout=getLayout("mediumClassic"),
-    pacman=multiAgents.ApproximateQAgent(alpha=0.01, epsilon=0.1, gamma=0.9),
-    ghosts=[RandomGhost(1), RandomGhost(2)],
-    display=textDisplay.NullGraphics(),  # ✅ Proper null display
-    numGames=1000,
+    layout=layout,
+    pacman=agent,
+    ghosts=ghosts,
+    display=textDisplay.NullGraphics(),
+    numGames=2000,
     record=False,
     numTraining=0,
     catchExceptions=False,
