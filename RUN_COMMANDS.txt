@@ -1,0 +1,27 @@
+=== RUN COMMANDS FOR PACMAN AI PROJECT ===
+
+--- BACKEND TERMINAL ---
+cd backend
+py -m uvicorn main:app --reload --host 0.0.0.0 --port 8000   
+
+--- FRONTEND TERMINAL ---
+cd frontend
+npm run dev
+
+--- ALTERNATIVE: TRAINING TERMINAL ---
+cd backend
+.venv\Scripts\activate
+cd src
+py train.py -p ApproxQLearningAgent -l mediumClassic -n 1500
+
+--- ALTERNATIVE: TESTING/GRADING TERMINAL ---
+cd backend
+.venv\Scripts\activate
+cd src
+py grade.py -p ApproxQLearningAgent --quick -n 50
+
+=== NOTES ===
+- Backend uses FastAPI + Uvicorn (ASGI server)
+- Frontend uses Vite dev server
+- Training/Grading use the same virtual environment
+- Weights are saved to backend/src/data/

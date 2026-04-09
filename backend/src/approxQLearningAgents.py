@@ -42,7 +42,15 @@ class ApproxQLearningAgent(Agent):
 
         if not os.path.exists("data/approx_weights.csv"):
             with open("data/approx_weights.csv","w") as f:
-                f.write("Episode,bias,closestFood,nearbyFood,ghostDist,nearGhost,danger,scaredGhostDist,canEatGhost,capsuleDist,mobility,stopped,score\n")
+                f.write(
+                    "Episode,"
+                    "bias,ateFood,ateCapsule,"
+                    "closestFood,foodDensity,foodRemaining,"
+                    "ghostDist,nearGhost,danger,ghostPressure,avoidGhost,"
+                    "scaredGhostDist,canEatGhost,"
+                    "capsuleDist,strategicCapsule,"
+                    "mobility,restricted,reverse,stopped,score\n"
+                )
 
     # ----------------------------
     # FEATURE FUNCTION
@@ -163,18 +171,29 @@ class ApproxQLearningAgent(Agent):
         with open("data/approx_weights.csv","a") as f:
             f.write(f"{self.episode},"
                     f"{self.weights.get('bias', 0)},"
+                    f"{self.weights.get('ateFood', 0)},"
+                    f"{self.weights.get('ateCapsule', 0)},"
                     f"{self.weights.get('closestFood', 0)},"
-                    f"{self.weights.get('nearbyFood', 0)},"
+                    f"{self.weights.get('foodDensity', 0)},"
+                    f"{self.weights.get('foodRemaining', 0)},"
                     f"{self.weights.get('ghostDist', 0)},"
                     f"{self.weights.get('nearGhost', 0)},"
                     f"{self.weights.get('danger', 0)},"
+                    f"{self.weights.get('ghostPressure', 0)},"
+                    f"{self.weights.get('avoidGhost', 0)},"
                     f"{self.weights.get('scaredGhostDist', 0)},"
                     f"{self.weights.get('canEatGhost', 0)},"
                     f"{self.weights.get('capsuleDist', 0)},"
+                    f"{self.weights.get('strategicCapsule', 0)},"
                     f"{self.weights.get('mobility', 0)},"
+                    f"{self.weights.get('restricted', 0)},"
+                    f"{self.weights.get('reverse', 0)},"
                     f"{self.weights.get('stopped', 0)},"
                     f"{self.weights.get('score', 0)}\n")
 
-        self.epsilon = max(0.01,self.epsilon*0.995)
+        # Slower decay helps mediumClassic (needs longer exploration)
+        # Only decay while learning. For evaluation runs (alpha=0), keep epsilon as provided.
+        if self.alpha > 0:
+            self.epsilon = max(0.05, self.epsilon * 0.999)
 
         print(f"Episode {self.episode} done | epsilon {self.epsilon:.3f}")

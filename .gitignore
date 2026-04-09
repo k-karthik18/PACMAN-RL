@@ -22,10 +22,11 @@ dist/
 .vscode/
 .idea/
 *.swp
-*.txt
-*.jpg
-*.md
+# *.txt (Commenting out to allow root level command lists)
+# *.md (Commenting out to allow root level documentation)
 !README.md
 !README-WEB.md
 !PROJECT_DOCUMENTATION.md
 !PRESENTATION_GUIDE.md
+!COMMANDS_LIST.txt
+!PROJECT_SUMMARY.md

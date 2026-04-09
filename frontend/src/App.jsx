@@ -551,21 +551,39 @@ export default function App() {
                     <div style={{ opacity: 0.75 }}>Run a learning agent (QLearningAgent, ApproxQLearningAgent) to see live calculations.</div>
                   ) : (
                     traces.slice(-120).map((t, idx) => (
-                      <div key={idx} className="trace-row">
+                      <div key={idx} className={`trace-row event-${t.event || 'default'}`}>
                         {t.event === 'select_action' ? (
                           <>
-                            <div className="trace-title">[{t.agent}] select_action: {t.selected} (ε={t.epsilon?.toFixed?.(2) ?? t.epsilon})</div>
-                            <div className="trace-json">Q-values: {JSON.stringify(t.q_values)}</div>
+                            <div className="trace-title">
+                              <span className="trace-badge select">SELECT</span>
+                              <span>{t.agent}</span>
+                              <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>→ {t.selected} (ε={t.epsilon?.toFixed?.(2) ?? t.epsilon})</span>
+                            </div>
+                            <div className="trace-json">
+                              <span className="trace-json-highlight">Q-Values:</span> {JSON.stringify(t.q_values)}
+                            </div>
                           </>
                         ) : t.agent === 'QLearningAgent' ? (
                           <>
-                            <div className="trace-title">[QLearningAgent] update: a={t.action} r={t.reward}</div>
-                            <div className="trace-json">old={t.old_value?.toFixed?.(3)} → new={t.new_value?.toFixed?.(3)} | sample={t.sample?.toFixed?.(3)}</div>
+                            <div className="trace-title">
+                              <span className="trace-badge update">UPDATE</span>
+                              <span>{t.agent}</span>
+                              <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>→ a={t.action} r={t.reward}</span>
+                            </div>
+                            <div className="trace-json">
+                              <span className="trace-json-highlight">old=</span>{t.old_value?.toFixed?.(3)} <span className="trace-json-highlight">new=</span>{t.new_value?.toFixed?.(3)} | <span className="trace-json-highlight">sample=</span>{t.sample?.toFixed?.(3)}
+                            </div>
                           </>
                         ) : (
                           <>
-                            <div className="trace-title">[ApproxQLearningAgent] update: a={t.action} r={t.reward} td={t.td_error?.toFixed?.(3)}</div>
-                            <div className="trace-json">features: {JSON.stringify(t.features)}</div>
+                            <div className="trace-title">
+                              <span className="trace-badge update">UPDATE</span>
+                              <span>{t.agent}</span>
+                              <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>→ a={t.action} r={t.reward} td={t.td_error?.toFixed?.(3)}</span>
+                            </div>
+                            <div className="trace-json">
+                              <span className="trace-json-highlight">Features:</span> {JSON.stringify(t.features)}
+                            </div>
                           </>
                         )}
                       </div>

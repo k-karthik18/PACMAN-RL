@@ -55,6 +55,18 @@ class QLearningAgent(Agent):
         bestActions = [a for a in legalActions if self.getQValue(state, a) == maxVal]
         return random.choice(bestActions)
 
+    def getPolicy(self, state):
+        return self.computeActionFromQValues(state)
+
+    def getValue(self, state):
+        return self.computeValueFromQValues(state)
+
+    def update(self, state, action, nextState, reward):
+        q_sa = self.getQValue(state, action)
+        v_next = self.getValue(nextState)
+        self.qValues[(state, action)] = q_sa + self.alpha * (reward + self.gamma * v_next - q_sa)
+
+
     def getAction(self, state):
 
         legalActions = state.getLegalPacmanActions()

@@ -51,6 +51,7 @@ AGENTS = [
     {"id": "QLearningAgent", "label": "Q-Learning", "params": ["alpha", "gamma", "epsilon"]},
     {"id": "ApproxQLearningAgent", "label": "Approx Q-Learning", "params": ["alpha", "gamma", "epsilon"]},
     {"id": "ApproxSarsaAgent", "label": "Approx Sarsa", "params": ["alpha", "gamma", "epsilon"]},
+    {"id": "TestAgent", "label": "Test Agent", "params": []},
 ]
 
 

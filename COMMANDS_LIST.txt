@@ -1,0 +1,55 @@
+# Pacman AI - Training & Testing Commands
+
+## 1. High-Speed Training (Offline)
+Use these commands in the `backend/src` directory to train your agents quickly without graphics.
+Weights are automatically saved to `backend/src/data/`.
+
+### Approx Q-Learning (Best for Medium/Large Maps)
+# Default Training (1500 episodes on mediumClassic)
+# Parameters: alpha=0.2, gamma=0.9, epsilon=0.5
+py train.py -p ApproxQLearningAgent -l mediumClassic
+
+# Targeted Training (Small Maps)
+py train.py -p ApproxQLearningAgent -l smallClassic -n 500
+
+### Approx SARSA
+# Default Training
+py train.py -p ApproxSarsaAgent -l mediumClassic -n 1500
+
+---
+
+## 2. Evaluation & Grading
+Use these to verify win rates across different map complexities.
+
+# Quick check on key layouts (open, test, minimax)
+py grade.py -p ApproxQLearningAgent --quick -n 50
+
+# Full benchmark on ALL layouts
+py grade.py -p ApproxQLearningAgent --full -n 50
+
+# Custom evaluation
+py grade.py -p ApproxQLearningAgent -l mediumClassic,testClassic -n 100
+
+---
+
+## 3. Parameter Tuning
+If win rates are not satisfactory, run the tuner to find the best alpha/gamma/epsilon combo.
+py grade.py -p ApproxQLearningAgent --tune
+
+---
+
+## 4. Visual Execution (Manual)
+Run these to watch the agent play in a window after it has been trained.
+
+# Watch Approx Q-Learning on mediumClassic
+py pacman.py -p ApproxQLearningAgent -l mediumClassic -n 10
+
+# Watch Q-Learning on testClassic (Fast Mode)
+py pacman.py -p QLearningAgent -l testClassic -n 100 -q
+
+---
+
+## 5. Web Interface
+1. Start backend: `cd backend; py main.py`
+2. Start frontend: `cd frontend; npm run dev`
+3. Training in the web UI will also read/write the same weight files.

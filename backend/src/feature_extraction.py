@@ -238,9 +238,21 @@ def getCompetitionFeatures(state, action):
     ghostStates = successor.getGhostStates()
     capsules = successor.getCapsules()
     legalActions = successor.getLegalPacmanActions()
+
+    prevFoodCount = state.getNumFood()
+    newFoodCount = successor.getNumFood()
+    prevCapsules = state.getCapsules()
+    prevCapsuleCount = len(prevCapsules) if prevCapsules is not None else 0
+    newCapsuleCount = len(capsules) if capsules is not None else 0
     
     # Bias
     features["bias"] = 1.0
+
+    if newFoodCount < prevFoodCount:
+        features["ateFood"] = 1.0
+
+    if newCapsuleCount < prevCapsuleCount:
+        features["ateCapsule"] = 1.0
     
     # === FOOD ===
     if foodList:
@@ -270,6 +282,9 @@ def getCompetitionFeatures(state, action):
         # Multiple ghost threat
         closeGhosts = sum(1 for d in activeDists if d <= 3)
         features["ghostPressure"] = closeGhosts / 4.0
+
+        if minActive <= 4:
+            features["avoidGhost"] = 1.0 / (minActive + 1)
     
     if scaredGhosts:
         scaredDists = [manhattanDistance(pacPos, g.getPosition()) for g in scaredGhosts]
@@ -300,6 +315,11 @@ def getCompetitionFeatures(state, action):
     # === ACTION PENALTIES ===
     if action == 'Stop':
         features["stopped"] = 1.0
+
+    rev = {"North": "South", "South": "North", "East": "West", "West": "East"}
+    prevDir = state.getPacmanState().configuration.direction
+    if action in rev and prevDir in rev and action == rev[prevDir]:
+        features["reverse"] = 1.0
     
     # === GAME STATE ===
     features["foodRemaining"] = len(foodList) / 50.0
