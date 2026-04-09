@@ -4,7 +4,7 @@ import os
 from game import Agent
 from util import Counter
 from util import manhattanDistance
-from feature_extraction import getCompetitionFeatures
+from feature_extraction import getSimpleFeatures
 
 TRACE_QUEUE = None
 
@@ -44,16 +44,12 @@ class ApproxSarsaAgent(Agent):
             with open("data/approx_sarsa_weights.csv","w") as f:
                 f.write(
                     "Episode,"
-                    "bias,ateFood,ateCapsule,"
-                    "closestFood,foodDensity,foodRemaining,"
-                    "ghostDist,nearGhost,danger,ghostPressure,avoidGhost,"
-                    "scaredGhostDist,canEatGhost,"
-                    "capsuleDist,strategicCapsule,"
-                    "mobility,restricted,reverse,stopped,score\n"
+                    "bias,closestFood,closestGhost,danger,"
+                    "closestScared,eatGhost,closestCapsule,stopped\n"
                 )
 
     def getFeatures(self,state,action):
-        return getCompetitionFeatures(state, action)
+        return getSimpleFeatures(state, action)
 
     def getQValue(self,state,action):
 
@@ -153,25 +149,13 @@ class ApproxSarsaAgent(Agent):
         with open("data/approx_sarsa_weights.csv","a") as f:
             f.write(f"{self.episode},"
                     f"{self.weights.get('bias', 0)},"
-                    f"{self.weights.get('ateFood', 0)},"
-                    f"{self.weights.get('ateCapsule', 0)},"
                     f"{self.weights.get('closestFood', 0)},"
-                    f"{self.weights.get('foodDensity', 0)},"
-                    f"{self.weights.get('foodRemaining', 0)},"
-                    f"{self.weights.get('ghostDist', 0)},"
-                    f"{self.weights.get('nearGhost', 0)},"
+                    f"{self.weights.get('closestGhost', 0)},"
                     f"{self.weights.get('danger', 0)},"
-                    f"{self.weights.get('ghostPressure', 0)},"
-                    f"{self.weights.get('avoidGhost', 0)},"
-                    f"{self.weights.get('scaredGhostDist', 0)},"
-                    f"{self.weights.get('canEatGhost', 0)},"
-                    f"{self.weights.get('capsuleDist', 0)},"
-                    f"{self.weights.get('strategicCapsule', 0)},"
-                    f"{self.weights.get('mobility', 0)},"
-                    f"{self.weights.get('restricted', 0)},"
-                    f"{self.weights.get('reverse', 0)},"
-                    f"{self.weights.get('stopped', 0)},"
-                    f"{self.weights.get('score', 0)}\n")
+                    f"{self.weights.get('closestScared', 0)},"
+                    f"{self.weights.get('eatGhost', 0)},"
+                    f"{self.weights.get('closestCapsule', 0)},"
+                    f"{self.weights.get('stopped', 0)}\n")
 
         # Slower decay helps mediumClassic (needs longer exploration)
         # Only decay while learning. For evaluation runs (alpha=0), keep epsilon as provided.

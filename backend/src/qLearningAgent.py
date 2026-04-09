@@ -64,7 +64,23 @@ class QLearningAgent(Agent):
     def update(self, state, action, nextState, reward):
         q_sa = self.getQValue(state, action)
         v_next = self.getValue(nextState)
-        self.qValues[(state, action)] = q_sa + self.alpha * (reward + self.gamma * v_next - q_sa)
+        new_q = q_sa + self.alpha * (reward + self.gamma * v_next - q_sa)
+        self.qValues[(state, action)] = new_q
+        
+        if TRACE_QUEUE is not None:
+            try:
+                TRACE_QUEUE.put({
+                    "type": "trace",
+                    "agent": "QLearningAgent",
+                    "event": "update",
+                    "action": action,
+                    "reward": reward,
+                    "old_value": q_sa,
+                    "new_value": new_q,
+                    "sample": reward + self.gamma * v_next
+                })
+            except Exception:
+                pass
 
 
     def getAction(self, state):

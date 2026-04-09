@@ -44,6 +44,9 @@ export default function App() {
   const canvasRef = useRef(null)
   const wsRef = useRef(null)
 
+  const latestQTrace = traces.slice().reverse().find(t => t.q_values);
+  const latestQValues = latestQTrace ? latestQTrace.q_values : null;
+
   const frameDelay = SPEED_PRESETS.find(p => p.id === speedPreset)?.delay ?? 0.06
   const isManual = agent === 'ManualAgent'
 
@@ -516,28 +519,55 @@ export default function App() {
             <p className="stats-subtitle">Action selection, Q-values, TD error and weight updates streamed while the agent runs.</p>
 
             <div className="stats-grid-full">
-              <div className="stats-panel">
-                <div className="stats-panel-header">
-                  <div className="stats-panel-title">Weights</div>
-                  <div className="stats-panel-subtitle">Episode {episode || 0}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="stats-panel">
+                  <div className="stats-panel-header">
+                    <div className="stats-panel-title">Weights</div>
+                    <div className="stats-panel-subtitle">Episode {episode || 0}</div>
+                  </div>
+                  <div className="stats-panel-body">
+                    {latestWeights ? (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table className="weights-table">
+                          <tbody>
+                            {Object.entries(latestWeights).map(([k, v]) => (
+                              <tr key={k}>
+                                <td>{k}</td>
+                                <td>{String(v)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div style={{ opacity: 0.75 }}>Run Approx Q-Learning (or Approx SARSA) to see live weight updates.</div>
+                    )}
+                  </div>
                 </div>
-                <div className="stats-panel-body">
-                  {latestWeights ? (
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <tbody>
-                          {Object.entries(latestWeights).map(([k, v]) => (
-                            <tr key={k}>
-                              <td style={{ padding: '8px 10px', opacity: 0.8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{k}</td>
-                              <td style={{ padding: '8px 10px', textAlign: 'right', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(v)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div style={{ opacity: 0.75 }}>Run Approx Q-Learning (or Approx SARSA) to see live weight updates.</div>
-                  )}
+
+                <div className="stats-panel">
+                  <div className="stats-panel-header">
+                    <div className="stats-panel-title">Live Q-Values</div>
+                    <div className="stats-panel-subtitle">Latest step</div>
+                  </div>
+                  <div className="stats-panel-body">
+                    {latestQValues ? (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table className="weights-table">
+                          <tbody>
+                            {Object.entries(latestQValues).map(([dir, val]) => (
+                              <tr key={dir}>
+                                <td>{dir}</td>
+                                <td style={{ color: "var(--warning)" }}>{Number(val).toFixed(4)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div style={{ opacity: 0.75 }}>Run a Q-Learning agent to see active state values.</div>
+                    )}
+                  </div>
                 </div>
               </div>
 

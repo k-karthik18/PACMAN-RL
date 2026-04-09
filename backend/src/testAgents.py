@@ -1,8 +1,12 @@
 import random
-
 from game import Agent
 from util import manhattanDistance
 
+TRACE_QUEUE = None
+
+def set_trace_queue(q):
+    global TRACE_QUEUE
+    TRACE_QUEUE = q
 
 class TestAgent(Agent):
     def __init__(self, **kwargs):
@@ -17,6 +21,7 @@ class TestAgent(Agent):
 
         best_score = None
         best_actions = []
+        action_scores = {}
 
         for action in candidates:
             successor = state.generatePacmanSuccessor(action)
@@ -59,10 +64,28 @@ class TestAgent(Agent):
             if action == "Stop":
                 score -= 2
 
+            action_scores[action] = score
+
             if best_score is None or score > best_score:
                 best_score = score
                 best_actions = [action]
             elif score == best_score:
                 best_actions.append(action)
 
-        return random.choice(best_actions) if best_actions else random.choice(legal)
+        chosen_action = random.choice(best_actions) if best_actions else random.choice(legal)
+
+        if TRACE_QUEUE is not None:
+            try:
+                TRACE_QUEUE.put({
+                    "type": "trace",
+                    "agent": "TestAgent (Heuristic)",
+                    "event": "select_action",
+                    "epsilon": "N/A",
+                    "legal_actions": list(legal),
+                    "q_values": action_scores,
+                    "selected": chosen_action,
+                })
+            except Exception:
+                pass
+
+        return chosen_action

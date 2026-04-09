@@ -148,9 +148,23 @@ def run_game_thread(
                 except Exception:
                     pass
 
+            if trace_queue is not None and pacman_agent == "ApproxSarsaAgent":
+                try:
+                    from approxSarsaAgents import set_trace_queue
+                    set_trace_queue(trace_queue)
+                except Exception:
+                    pass
+
             if trace_queue is not None and pacman_agent == "QLearningAgent":
                 try:
                     from qLearningAgent import set_trace_queue
+                    set_trace_queue(trace_queue)
+                except Exception:
+                    pass
+
+            if trace_queue is not None and pacman_agent == "TestAgent":
+                try:
+                    from testAgents import set_trace_queue
                     set_trace_queue(trace_queue)
                 except Exception:
                     pass
