@@ -4,7 +4,7 @@ import os
 from game import Agent
 from util import Counter
 from util import manhattanDistance
-from feature_extraction import getSimpleFeatures
+from feature_extraction import getCompetitionFeatures
 
 TRACE_QUEUE = None
 
@@ -12,9 +12,15 @@ def set_trace_queue(q):
     global TRACE_QUEUE
     TRACE_QUEUE = q
 
+# Key feature names tracked in per-episode logs
+_FEATURE_KEYS = [
+    "bias", "closestFood", "ghostDist", "danger", "nearGhost",
+    "scaredGhostDist", "canEatGhost", "capsuleDist", "mobility", "stopped", "reverse"
+]
+
 class ApproxQLearningAgent(Agent):
 
-    def __init__(self, alpha=0.1, gamma=0.9, epsilon=0.2):
+    def __init__(self, alpha=0.2, gamma=0.9, epsilon=0.5):
         super().__init__()
 
         self.alpha = float(alpha)
@@ -22,7 +28,7 @@ class ApproxQLearningAgent(Agent):
         self.epsilon = float(epsilon)
 
         self.weights = Counter()
-        
+
         # Load existing weights if they exist
         if os.path.exists("data/approx_weights.pkl"):
             try:
@@ -37,64 +43,80 @@ class ApproxQLearningAgent(Agent):
         self.prevAction = None
         self.episode = 0
 
+        # Step-level feature accumulation for per-episode logging
+        self._step_features = Counter()
+        self._step_count = 0
+
         if not os.path.exists("data"):
             os.makedirs("data")
 
+        # Episode score/win/epsilon log
+        if not os.path.exists("data/approx_q_scores.csv"):
+            with open("data/approx_q_scores.csv", "w") as f:
+                f.write("episode,score,win,epsilon\n")
+
+        # Weight evolution log (one row per episode)
         if not os.path.exists("data/approx_weights.csv"):
-            with open("data/approx_weights.csv","w") as f:
+            with open("data/approx_weights.csv", "w") as f:
                 f.write(
                     "Episode,"
-                    "bias,closestFood,closestGhost,danger,"
-                    "closestScared,eatGhost,closestCapsule,stopped\n"
+                    "bias,closestFood,ghostDist,danger,nearGhost,"
+                    "scaredGhostDist,canEatGhost,capsuleDist,mobility,stopped,reverse\n"
+                )
+
+        # Average feature values per episode log
+        if not os.path.exists("data/approx_q_features.csv"):
+            with open("data/approx_q_features.csv", "w") as f:
+                f.write(
+                    "episode,"
+                    "bias,closestFood,ghostDist,danger,nearGhost,"
+                    "scaredGhostDist,canEatGhost,capsuleDist,mobility,stopped,reverse\n"
                 )
 
     # ----------------------------
     # FEATURE FUNCTION
     # ----------------------------
-    def getFeatures(self,state,action):
-        return getSimpleFeatures(state, action)
+    def getFeatures(self, state, action):
+        return getCompetitionFeatures(state, action)
 
     # ----------------------------
-    def getQValue(self,state,action):
-        features = self.getFeatures(state,action)
+    def getQValue(self, state, action):
+        features = self.getFeatures(state, action)
         return self.weights * features
 
     # ----------------------------
-    def getValue(self,state):
-
+    def getValue(self, state):
         legalActions = state.getLegalPacmanActions()
         if not legalActions:
             return 0.0
-
-        return max(self.getQValue(state,a) for a in legalActions)
+        return max(self.getQValue(state, a) for a in legalActions)
 
     # ----------------------------
-    def getPolicy(self,state):
-
+    def getPolicy(self, state):
         legalActions = state.getLegalPacmanActions()
         if not legalActions:
             return None
-
         bestValue = self.getValue(state)
-
         bestActions = [a for a in legalActions
-                       if self.getQValue(state,a) == bestValue]
-
+                       if self.getQValue(state, a) == bestValue]
         return random.choice(bestActions)
 
     # ----------------------------
-    def update(self,state,action,nextState,reward):
-
-        features = self.getFeatures(state,action)
-
-        q_sa = self.getQValue(state,action)
+    def update(self, state, action, nextState, reward):
+        features = self.getFeatures(state, action)
+        q_sa = self.getQValue(state, action)
         v_next = self.getValue(nextState)
 
-        tdError = reward + self.gamma*v_next - q_sa
+        tdError = reward + self.gamma * v_next - q_sa
 
         prev_weights = dict(self.weights)
         for f in features:
             self.weights[f] += self.alpha * tdError * features[f]
+
+        # Accumulate feature values for episode-level logging
+        for f in features:
+            self._step_features[f] += features[f]
+        self._step_count += 1
 
         if TRACE_QUEUE is not None:
             try:
@@ -115,17 +137,14 @@ class ApproxQLearningAgent(Agent):
                 pass
 
     # ----------------------------
-    def getAction(self,state):
-
+    def getAction(self, state):
         legalActions = state.getLegalPacmanActions()
         if not legalActions:
             return None
 
         if self.prevState is not None:
-
             reward = state.getScore() - self.prevState.getScore()
-
-            self.update(self.prevState,self.prevAction,state,reward)
+            self.update(self.prevState, self.prevAction, state, reward)
 
         if random.random() < self.epsilon:
             action = random.choice(legalActions)
@@ -153,31 +172,58 @@ class ApproxQLearningAgent(Agent):
         return action
 
     # ----------------------------
-    def final(self,state):
-
+    def final(self, state):
         reward = state.getScore() - self.prevState.getScore()
-
-        self.update(self.prevState,self.prevAction,state,reward)
+        self.update(self.prevState, self.prevAction, state, reward)
 
         self.episode += 1
+        score = state.getScore()
+        win = 1 if state.isWin() else 0
 
-        with open("data/approx_weights.pkl","wb") as f:
-            pickle.dump(dict(self.weights),f)
+        # Save weights
+        with open("data/approx_weights.pkl", "wb") as f:
+            pickle.dump(dict(self.weights), f)
 
-        with open("data/approx_weights.csv","a") as f:
-            f.write(f"{self.episode},"
-                    f"{self.weights.get('bias', 0)},"
-                    f"{self.weights.get('closestFood', 0)},"
-                    f"{self.weights.get('closestGhost', 0)},"
-                    f"{self.weights.get('danger', 0)},"
-                    f"{self.weights.get('closestScared', 0)},"
-                    f"{self.weights.get('eatGhost', 0)},"
-                    f"{self.weights.get('closestCapsule', 0)},"
-                    f"{self.weights.get('stopped', 0)}\n")
+        # Log weight evolution
+        with open("data/approx_weights.csv", "a") as f:
+            f.write(
+                f"{self.episode},"
+                f"{self.weights.get('bias', 0)},"
+                f"{self.weights.get('closestFood', 0)},"
+                f"{self.weights.get('ghostDist', 0)},"
+                f"{self.weights.get('danger', 0)},"
+                f"{self.weights.get('nearGhost', 0)},"
+                f"{self.weights.get('scaredGhostDist', 0)},"
+                f"{self.weights.get('canEatGhost', 0)},"
+                f"{self.weights.get('capsuleDist', 0)},"
+                f"{self.weights.get('mobility', 0)},"
+                f"{self.weights.get('stopped', 0)},"
+                f"{self.weights.get('reverse', 0)}\n"
+            )
 
-        # Slower decay helps mediumClassic (needs longer exploration)
-        # Only decay while learning. For evaluation runs (alpha=0), keep epsilon as provided.
+        # Log score / win / epsilon per episode
+        with open("data/approx_q_scores.csv", "a") as f:
+            f.write(f"{self.episode},{score},{win},{self.epsilon:.4f}\n")
+
+        # Log average feature values per episode
+        n = max(self._step_count, 1)
+        with open("data/approx_q_features.csv", "a") as f:
+            vals = ",".join(
+                f"{self._step_features.get(k, 0) / n:.5f}"
+                for k in _FEATURE_KEYS
+            )
+            f.write(f"{self.episode},{vals}\n")
+
+        # Reset step-level accumulators
+        self._step_features = Counter()
+        self._step_count = 0
+
+        # Reset transition memory (avoid cross-episode contamination)
+        self.prevState = None
+        self.prevAction = None
+
+        # Epsilon decay: faster 0.997 (vs old 0.999) — only while learning
         if self.alpha > 0:
-            self.epsilon = max(0.05, self.epsilon * 0.999)
+            self.epsilon = max(0.05, self.epsilon * 0.997)
 
-        print(f"Episode {self.episode} done | epsilon {self.epsilon:.3f}")
+        print(f"[ApproxQL] Ep {self.episode:>4} | score={score:>6.1f} | win={bool(win)} | ε={self.epsilon:.3f}")

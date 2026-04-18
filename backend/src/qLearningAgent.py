@@ -20,6 +20,7 @@ class QLearningAgent(Agent):
         self.epsilon = float(epsilon)
         self.numTraining = int(numTraining)
         self.qValues = Counter()
+        self.episode = 0
 
         # Load existing Q-values if they exist
         if os.path.exists("data/q_values.pkl"):
@@ -37,6 +38,11 @@ class QLearningAgent(Agent):
         # Create folder for storage
         if not os.path.exists("data"):
             os.makedirs("data")
+
+        # Episode score/win log
+        if not os.path.exists("data/qlearning_scores.csv"):
+            with open("data/qlearning_scores.csv", "w") as f:
+                f.write("episode,score,win,q_table_size\n")
 
     def getQValue(self, state, action):
         return self.qValues[(state, action)]
@@ -66,7 +72,7 @@ class QLearningAgent(Agent):
         v_next = self.getValue(nextState)
         new_q = q_sa + self.alpha * (reward + self.gamma * v_next - q_sa)
         self.qValues[(state, action)] = new_q
-        
+
         if TRACE_QUEUE is not None:
             try:
                 TRACE_QUEUE.put({
@@ -82,9 +88,7 @@ class QLearningAgent(Agent):
             except Exception:
                 pass
 
-
     def getAction(self, state):
-
         legalActions = state.getLegalPacmanActions()
         if len(legalActions) == 0:
             return None
@@ -122,14 +126,25 @@ class QLearningAgent(Agent):
 
     def final(self, state):
         """
-        Called at end of game
-        Save Q-table
+        Called at end of each game. Updates Q-table, logs results, saves to disk.
         """
         reward = state.getScore() - self.prevState.getScore()
         self.update(self.prevState, self.prevAction, state, reward)
 
-        # Save Q-table
-        with open("data/qvalues.pkl", "wb") as f:
+        self.episode += 1
+        score = state.getScore()
+        win = 1 if state.isWin() else 0
+
+        # Reset transition memory (avoid cross-episode contamination)
+        self.prevState = None
+        self.prevAction = None
+
+        # Save Q-table (consistent filename: q_values.pkl)
+        with open("data/q_values.pkl", "wb") as f:
             pickle.dump(dict(self.qValues), f)
 
-        print("Q-table saved to data/qvalues.pkl")
+        # Log score / win / table size per episode
+        with open("data/qlearning_scores.csv", "a") as f:
+            f.write(f"{self.episode},{score},{win},{len(self.qValues)}\n")
+
+        print(f"[QLearning] Ep {self.episode:>4} | score={score:>6.1f} | win={bool(win)} | Q-table={len(self.qValues)} states")
