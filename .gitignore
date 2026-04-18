@@ -14,8 +14,8 @@ backend/src/data/*.csv
 data/
 
 # Node.js
-node_modules/
-dist/
+**/node_modules/
+**/dist/
 .DS_Store
 
 # IDE
@@ -30,3 +30,5 @@ dist/
 !PRESENTATION_GUIDE.md
 !COMMANDS_LIST.txt
 !PROJECT_SUMMARY.md
+!pacman_rl_explainer.md
+!research_paper_content.md
